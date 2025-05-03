@@ -1,4 +1,5 @@
-(ns flare-walkthrough)
+(ns flare-walkthrough
+  (:require [hiccup.core :as hiccup]))
 
 ;; Sending our first flare
 
@@ -49,4 +50,11 @@
 ;; Let's make our own super basic tool:
 
 (defn render [hiccup]
-  )
+  (tagged-literal 'flare/html {:html (hiccup/html hiccup)}))
+
+(render [:h1 "hello"])
+
+;; Is this any better?
+;; Well now we can call (render (quote ~top-level-form)) from a Custom REPL command.
+
+;; See `repl-commands`.
