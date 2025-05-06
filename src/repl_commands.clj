@@ -2,7 +2,8 @@
   (:require [clojure.java.io :as io]
             [clojure.string :as str]
             [hiccup.core :as hiccup]
-            [scicloj.kindly.v4.kind :as kind]))
+            [scicloj.kindly.v4.kind :as kind])
+  (:import (java.util.zip ZipEntry ZipOutputStream)))
 
 ;; We use REPL commands to perform Clay actions on forms and files.
 ;; They all have similar configuration, except for the :commandText Clojure snippet and name.
@@ -34,41 +35,87 @@
        "    (scicloj.clay.v2.snippets/" clay-fn-name (when args " ") (str/join " " args) "))" \newline))
 
 (def file "\"~file-path\"")
-(def current-form "(quote ~form-before-caret)")
+(def form-before-caret "(quote ~form-before-caret)")
 (def top-level-form "(quote ~top-level-form)")
 (def options "{:ide :cursive}")
+(def leader1 "ctrl+shift+a")
+(def leader2 "a")
 
 (def clay-commands
   "Connects the command name with the snippet function to call and the relevant arguments"
-  [["Clay Make File" (format-snippet "make-ns-html!" file options)]
-   ["Clay Make File Quarto" (format-snippet "make-ns-quarto-html!" file options)]
-   ["Clay Make File RevealJS" (format-snippet "make-ns-quarto-revealjs!" file options)]
-   ["Clay Make Current Form" (format-snippet "make-form-html!" current-form file options)]
-   ["Clay Make Current Form Quarto" (format-snippet "make-form-quarto-html!" current-form file options)]
-   ["Clay Make Top Level Form" (format-snippet "make-form-html!" top-level-form file options)]
-   ["Clay Make Top Level Form Quarto" (format-snippet "make-form-quarto-html!" top-level-form file options)]
-   ["Clay Browse" (format-snippet "browse!")]
-   ["Clay Watch" (format-snippet "watch!" options)]])
+  [["Clay Make File" "f" ["make-ns-html!" file options]]
+   ["Clay Make File Quarto" "q" ["make-ns-quarto-html!" file options]]
+   ["Clay Make File RevealJS" "r" ["make-ns-quarto-revealjs!" file options]]
+   ["Clay Make Form Before Caret" "c" ["make-form-html!" form-before-caret file options]]
+   ["Clay Make Form Before Caret Quarto" "C" ["make-form-quarto-html!" form-before-caret file options]]
+   ["Clay Make Top Level Form" "t" ["make-form-html!" top-level-form file options]]
+   ["Clay Make Top Level Form Quarto" "T" ["make-form-quarto-html!" top-level-form file options]]
+   ["Clay Browse" "b" ["browse!"]]
+   ["Clay Watch" "w" ["watch!" options]]])
 
 (kind/table clay-commands)
 
-;; We can write workspace REPL commands in the .idea folder
+(defn repl-commands [project]
+  (hiccup/html {:mode :xml}
+               [:application
+                [:component {:name (if project
+                                     "ReplProjectCommandManager"
+                                     "ReplCommandManager")}
+                 (for [[action-name _ snippet-args] clay-commands]
+                   [:repl-command (assoc command-template
+                                    :name action-name
+                                    :commandText (apply format-snippet snippet-args))])]]))
 
+;; We can write workspace REPL commands in the .idea folder
 (defn write-repl-commands! []
-  (spit (io/file ".idea" "repl-commands.xml")
-        (hiccup/html {:mode :xml}
-                     [:application
-                      [:component {:name "ReplProjectCommandManager"}
-                       (for [[n s] clay-commands]
-                         [:repl-command (assoc command-template
-                                          :name n
-                                          :commandText s)])]])))
+  (spit (doto (io/file ".idea" "repl-commands.xml")
+          (io/make-parents))
+        (repl-commands true)))
 
 (comment
   (write-repl-commands!))
 
-;; To create global REPL commands,
-;; use component name "ReplCommandManager"
-;; and put the file in your options directory instead.
-;; For me that is:
-;; /Users/timothypratley/Library/Application\ Support/JetBrains/IdeaIC2025.1/options/repl-commands.xml
+(defn keymap []
+  (hiccup/html {:mode :xml}
+               [:keymap {:version "1"
+                         :name    "Cursive Clay Keymap"}
+                (for [[action-name k _] clay-commands]
+                  [:action {:id (str "Cursive.Repl.Command." action-name)}
+                   [:keyboard-shortcut (cond-> {:first-keystroke  leader1
+                                                :second-keystroke leader2
+                                                :third-keystroke  k})]])]))
+
+;; We can write workspace REPL commands in the .idea folder
+(defn write-keymap! []
+  (spit (doto (io/file ".idea" "keymaps" "cursive-clay-keymap.xml")
+          (io/make-parents))
+        (keymap)))
+
+(comment
+  (write-keymap!))
+
+(defmacro ^:private with-entry
+  [zip entry-name & body]
+  `(let [^ZipOutputStream zip# ~zip]
+     (try
+       (.putNextEntry zip# (ZipEntry. ~entry-name))
+       ~@body
+       (finally
+         (.closeEntry zip#)))))
+
+(defn write-zip!
+  "Makes a file suitable for File -> Manage IDE Settings -> Import Settings"
+  []
+  (with-open [file (io/output-stream "clay-settings.zip")
+              zip (ZipOutputStream. file)]
+    (doto zip
+      (with-entry "options/repl-commands.xml"
+                  (.write zip (.getBytes (repl-commands false))))
+      (with-entry "options/keymaps/cursive-clay-keymap.xml"
+                  (.write zip (.getBytes (keymap))))
+      (with-entry "installed.txt"
+                  (.write zip (.getBytes "com.cursiveclojure.cursive")))
+      (with-entry "IntelliJ IDEA Global Settings"))))
+
+(comment
+  (write-zip!))
