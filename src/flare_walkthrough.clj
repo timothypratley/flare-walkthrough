@@ -1,39 +1,39 @@
 (ns flare-walkthrough
   (:require [hiccup.core :as hiccup]))
 
-;; Sending our first flare
+;; Flares are a new Cursive and Calva feature.
+;; Let's send our first flare:
 
 (tagged-literal 'flare/html {:html "<em>hello world</em>"})
 
 ;; Flares are special values that request IDE behavior like showing HTML.
-;; Flares are used by tools like Clay to show data visualizations.
-;; You can also make Custom REPL Commands that produce flares.
-;; You can use them in the REPL too.
-;; Cursive and Calva both support flares.
+;; Flares enable tools like Clay to show data visualizations.
+;; You can make your own Custom REPL Commands that produce flares.
+;; Let's try some examples in the REPL.
 
-;; Display any HTML... or URL
+;; We can open a URL instead of passing HTML:
 
 (tagged-literal 'flare/html {:url "www.clojure.org"})
 
 ;; Cursive has a `:display :editor` option to open a separate panel
 ;; A title is required (maybe it should have a default)
 
-(tagged-literal 'flare/html {:url "www.clojure.org"
-                             :display :editor
-                             :title "Clojure"})
-
-;; A new panel is opened every time.
-
-;; Providing a key identifies a panel to reuse
-
-(tagged-literal 'flare/html {:url "www.clojure.org"
+(tagged-literal 'flare/html {:url "https://cursive-ide.com/blog/cursive-2025.1.html"
                              :display :editor
                              :title "Clojure"
                              :key "flare"})
 
-;; So now the panel changes in place
+;; Each time we send a flare, a new view is opened.
+;; Providing a key identifies a panel to reuse.
 
-(tagged-literal 'flare/html {:url "https://cursive-ide.com/blog/cursive-2025.1.html"
+(tagged-literal 'flare/html {:url "https://calva.io/flares/"
+                             :display :editor
+                             :title "Clojure"
+                             :key "flare"})
+
+;; So now a single view remains and is updated with new content
+
+(tagged-literal 'flare/html {:url "www.scicloj.org"
                              :display :editor
                              :title "Clojure"
                              :key "flare"})
@@ -45,16 +45,33 @@
                              :title "Clay"
                              :key "flare"})
 
-;; Usually you wouldn't litter your code with tagged literals like this,
-;; that's the job of tools!
-;; Let's make our own super basic tool:
+;; The default view for Cursive is `:inline`.
+;; The default view for Calva is `:editor` (inline is not supported).
 
-(defn render [hiccup]
+(tagged-literal 'flare/html {:url "http://localhost:1971"
+                             :title "Clay"
+                             :key "flare"
+                             :display :inline})
+
+
+;; **Don't litter your code with tagged literals like this**
+;; These examples were to demonstrate how they work.
+
+;; Flares should be produced by tools.
+;; Let's make our own tool:
+
+(defn hammer
+  "Renders hiccup and shows it in the editor"
+  [hiccup]
   (tagged-literal 'flare/html {:html (hiccup/html hiccup)}))
 
-(render [:h1 "hello"])
+(hammer [:h1 "hello"])
 
-;; Is this any better?
-;; Well now we can call (render (quote ~top-level-form)) from a Custom REPL command.
+;; Now we can set up a Custom REPL command:
 
-;; See `repl-commands`.
+;; (hammer (quote ~top-level-form))
+;;
+;; We've successfully moved the behavior (rendering) and mechanism (flare)
+;; out of our code, and into a tool!
+
+;; continued in  `src/repl_commands.clj`.

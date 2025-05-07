@@ -31,6 +31,8 @@
 
 (defn format-snippet
   [clay-fn-name & args]
+  ;; The tool needs to be required, and invoked with appropriate arguments.
+  ;; `require` is fully qualified so it will work from uninitialized namespaces.
   (str "(do (clojure.core/require '[scicloj.clay.v2.snippets])" \newline
        "    (scicloj.clay.v2.snippets/" clay-fn-name (when args " ") (str/join " " args) "))" \newline))
 
@@ -85,7 +87,6 @@
                                                 :second-keystroke leader2
                                                 :third-keystroke  k})]])]))
 
-;; We can write workspace REPL commands in the .idea folder
 (defn write-keymap! []
   (spit (doto (io/file ".idea" "keymaps" "cursive-clay-keymap.xml")
           (io/make-parents))
@@ -119,3 +120,8 @@
 
 (comment
   (write-zip!))
+
+
+;; See Calva-Power-Tools
+
+;; Continued in `src/tagged_literal_tangent.clj`

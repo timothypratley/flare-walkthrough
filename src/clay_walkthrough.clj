@@ -1,32 +1,56 @@
+^:kindly/hide-code
 (ns clay-walkthrough)
 
-;; Clay renders a namespace as HTML
+;; Literate programming is the practise of interleaving code, narrative, and visualizations.
+;; We are literating right now!
+
 ;; To render this file, I run the "Clay Make File" REPL Command
 
+;; * **Markdown** in comments is marked **up**
+;; * **Code** is displayed, evaluated, and the result shown
+
+(inc 2)
+
+;; We can visualize data in HTML.
+;; Here's some data
+
+(def item-sales
+  {:items ["Shirts" "Pants" "Socks"]
+   :sales [5 20 36]})
+
+;; We might want to view it as a table
+
+^:kind/table
+item-sales
+
+;; Or a chart
+
 ^:kind/echarts
-{:xAxis   {:data ["Shirts", "Cardigans", "Chiffons",
-                  "Pants", "Heels", "Socks"]}
+{:xAxis   {:data (:items item-sales)}
  :yAxis   {}
  :series  [{:name "sales"
             :type "bar"
-            :data [5 20 36
-                   10 10 20]}]}
-
-;; Clay sees annotations and produces HTML visualizations
-;; User code does not contain any rendering code
+            :data (:sales item-sales)}]}
 
 ;; To render a single form, I run the "Clay Make Top Level Form" Command
 
 ^:kind/hiccup
 [:svg
- [:circle {:r 50}]]
+ [:circle {:r 50 :cx 60 :cy 60 :fill "blue"}]]
 
-;; One open question is how the user should indicate they want inline, or display editor style.
+;; **My code does not contain any rendering code**
 
-;; Clay has other functions, such as running Quarto.
-;; I can do this using the "Clay Make File Quarto" REPL Command.
+;; The Clay tool sees metadata annotations and renders accordingly
 
-;; There are 9 useful Clay commands, which is a lot of setup in the UI with lots of opportunities for errors.
-;; Ideally these commands could be shared.
+;; My code compiles and works without any tools
 
-;; See `repl-commands` for more about what is in the Clay REPL Commands.
+;; People are free to experience the code however they please;
+;; trying it in a REPL,
+;; reading it as HTML website,
+;; exploring the visualizations with their own choice of tools,
+;; in a browser,
+;; or in an editor.
+
+;; Speaking of which... how are we seeing this in our editor?
+;;
+;; Continued in `src/flare_walkthrough.clj`
